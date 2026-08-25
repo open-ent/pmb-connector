@@ -42,9 +42,12 @@ surchageable par établissement via `pmb_page_size`.
 ### Configurer la connexion PMB d'un établissement
 
 1. Créer (ou avoir déjà) la ligne `pmb.etablissement` de l'établissement — `POST /pmb/schools`
-   (`idneo`, `uai`, `nom`, `principal`, `id_principal` pour les "cités scolaires" partageant un
-   même CDI : un UAI secondaire laisse `pmb_*` vide et hérite de la connexion de son
-   établissement `principal`).
+   (`idneo`, `uai`, `nom`, `principal`, `id_principal`). `id_principal` sert à PARTAGER une
+   connexion déjà configurée : cas des "cités scolaires" (plusieurs UAI, un même CDI
+   physique), mais aussi d'un établissement sans PMB propre qui utilise un catalogue
+   régional/départemental mutualisé — dans les deux cas l'UAI secondaire laisse `pmb_*` vide
+   et hérite de la connexion de la ligne visée par `id_principal` (établissement réel ou
+   simple ligne "virtuelle" ne représentant que la connexion partagée).
 2. Renseigner sa connexion PMB — `PUT /pmb/schools/:schoolId/connection` :
 <pre>
 {
