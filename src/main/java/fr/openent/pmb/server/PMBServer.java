@@ -5,7 +5,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -135,9 +134,12 @@ public class PMBServer {
                         handler.handle(Future.failedFuture(response.statusMessage()));
                         return;
                     }
-                    Buffer body = Buffer.buffer();
-                    response.bodyHandler(body::appendBuffer);
-                    response.endHandler(aVoid -> handler.handle(Future.succeededFuture(new JsonObject(new String(body.getBytes())))));
+                    // bodyHandler() installe déjà son propre endHandler pour livrer le buffer
+                    // complet une fois le flux terminé — enregistrer un endHandler séparément
+                    // par-dessus l'écrasait avant qu'il ait pu copier quoi que ce soit dans le
+                    // buffer, qui restait donc toujours vide ("No content to map due to
+                    // end-of-input" quel que soit le contenu réellement reçu).
+                    response.bodyHandler(body -> handler.handle(Future.succeededFuture(new JsonObject(body.toString()))));
                     response.exceptionHandler(throwable -> handler.handle(Future.failedFuture(throwable)));
                 })
                 .onFailure(throwable -> {

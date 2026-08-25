@@ -80,8 +80,19 @@ public class AmassWorker extends AbstractVerticle {
                 return;
             }
 
-            String searchId = ar.result().getJsonObject("result", new JsonObject()).getString("searchId");
-            int recordsCount = Integer.parseInt(ar.result().getJsonObject("result", new JsonObject()).getString("nbResults"));
+            // PMB renvoie "result": null (pas un objet vide) quand la recherche ne trouve
+            // rien — ex. catalogue vide/non encore alimenté. getJsonObject(key, default) de
+            // Vert.x ne retombe sur le défaut QUE si la clé est absente, pas si elle vaut
+            // explicitement null : sans ce garde, un catalogue vide faisait planter tout
+            // l'amass (NullPointerException) au lieu de simplement remonter 0 notice.
+            JsonObject result = ar.result().getJsonObject("result");
+            if (result == null) {
+                log.info(String.format("No result for structure %s (empty PMB catalog?)", uai));
+                handler.handle(Future.succeededFuture());
+                return;
+            }
+            String searchId = result.getString("searchId");
+            int recordsCount = Integer.parseInt(result.getString("nbResults"));
             PMBFetchSearchRecords fetch = new PMBFetchSearchRecords()
                     .setUAI(uai)
                     .setSearchId(searchId)

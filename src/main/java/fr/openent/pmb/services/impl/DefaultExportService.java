@@ -84,7 +84,13 @@ public class DefaultExportService implements ExportService {
 
     @Override
     public void retrieveDeployedStructures(Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH(s:Structure) WHERE HAS(s.exports) AND 'PMB' IN s.export RETURN DISTINCT s.UAI as uai, s.id as id";
+        // Bug historique : "s.export" (singulier) au lieu de "s.exports" (pluriel, la
+        // propriété réellement écrite ailleurs dans entcore, cf. org.entcore.directory.
+        // DefaultSchoolService) — la condition n'était donc jamais vraie, aucun
+        // établissement n'était jamais "trouvé déployé", l'amass PMB tournait toujours à
+        // vide silencieusement (masqué en plus par le root WARN du logger, cf. commit du
+        // fix logback-ent.xml).
+        String query = "MATCH(s:Structure) WHERE HAS(s.exports) AND 'PMB' IN s.exports RETURN DISTINCT s.UAI as uai, s.id as id";
         Neo4j.getInstance().execute(query, new JsonObject(), Neo4jResult.validResultHandler(handler));
     }
 }
