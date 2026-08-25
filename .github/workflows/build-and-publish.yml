@@ -1,0 +1,146 @@
+name: Build & Publish Fat Mod
+
+# Module GULP legacy à structure PLATE (pom.xml + gulpfile.js + webpack.config.js à la
+# racine, pas de découpage backend/frontend). Un seul job : build du front AngularJS/TS via
+# l'image node figée opendigitaleducation/node:10-alpine (gulp 3.9.1 / webpack 3.1.0 / TS
+# ancien - une image Node moderne casse ces vieux outils), puis build + publication du fat
+# jar Maven. Calqué sur le workflow build-and-publish.yml de connectors/nextcloud, adapté à
+# la structure plate (cf. gar-connector/moodle-connector, même forme, pas de front à builder
+# en CI côté eux).
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - dev
+      - "*-patched"
+      - "*-patched-dev"
+    tags: ["*"]
+  pull_request:
+    branches: [main, master, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-publish:
+    name: Build & Publish Fat Mod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "8"
+          distribution: temurin
+          cache: maven
+
+      # --- Front legacy (gulpfile.js + webpack.config.js à la racine) ---
+      - name: Build front (Gulp)
+        run: |
+          docker run --rm --user root \
+            -v "$PWD:/home/node/app" -w /home/node/app \
+            opendigitaleducation/node:10-alpine \
+            sh -c "npm install && node_modules/gulp/bin/gulp.js build"
+
+      # --- Maven : accès GitHub Packages (dépendance fr.openent:app-parent) ---
+      - name: Configure Maven pour GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                        https://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>github-packages</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <name>GitHub open-ent Packages</name>
+                    <url>https://maven.pkg.github.com/open-ent/entcore-v2</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+            <activeProfiles>
+              <activeProfile>github-packages</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      - name: Build fat JAR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: mvn clean package -Dmaven.test.skip=true -B -DbuildNumber=${GITHUB_SHA::8} -DscmBranch=${GITHUB_REF_NAME}
+
+      # --- Publication du fat-mod (au tag uniquement) ---
+      - name: Publish fat JAR to GitHub Packages
+        continue-on-error: true
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
+          if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR introuvable"; ls -la target/*.jar || true; exit 1; fi
+          BASE=$(basename "${FAT_JAR}" -fat.jar)
+          GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
+          echo "Publishing ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat"
+          mvn deploy:deploy-file \
+            -Dfile="${FAT_JAR}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" \
+            -Dversion="${VERSION}" -Dclassifier=fat -Dpackaging=jar \
+            -DrepositoryId=github -Durl="https://maven.pkg.github.com/${{ github.repository }}" -B
+
+      - name: Publish fat JAR to rct-nexus
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          cat > /tmp/nx-settings.xml <<EOF
+          <settings><servers><server><id>pt-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASSWORD}</password></server></servers></settings>
+          EOF
+          FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
+          if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR introuvable"; exit 1; fi
+          FAT_ABS=$(realpath "${FAT_JAR}")
+          BASE=$(basename "${FAT_JAR}" -fat.jar)
+          GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
+          NEXUS_BASE="https://rct-nexus.tech.fr"
+          # maven-releases est IMMUABLE : supprimer la version existante avant de redéployer
+          # (sinon 409 avalé -> ancien jar figé, le launcher resert du code périmé).
+          SEARCH="${NEXUS_BASE}/service/rest/v1/search?repository=maven-releases&maven.groupId=${GROUP_ID}&maven.artifactId=${ARTIFACT_ID}&maven.baseVersion=${VERSION}"
+          for ID in $(curl -sf -u "${NEXUS_USER}:${NEXUS_PASSWORD}" "${SEARCH}" | python3 -c "import sys,json;[print(i['id']) for i in json.load(sys.stdin).get('items',[])]"); do
+            echo "Suppression du composant nexus existant ${ID}"
+            curl -sf -u "${NEXUS_USER}:${NEXUS_PASSWORD}" -X DELETE "${NEXUS_BASE}/service/rest/v1/components/${ID}" || echo "::warning::échec suppression ${ID}"
+          done
+          sleep 5
+          echo "Deploying ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat -> rct-nexus"
+          ( cd /tmp && mvn deploy:deploy-file -s /tmp/nx-settings.xml -Dfile="${FAT_ABS}" \
+              -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" \
+              -Dclassifier=fat -Dpackaging=jar -DrepositoryId=pt-releases \
+              -Durl="${NEXUS_BASE}/repository/maven-releases/" -B )
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/*-fat.jar
+          generate_release_notes: true
