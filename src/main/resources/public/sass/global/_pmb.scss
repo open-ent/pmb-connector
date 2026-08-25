@@ -203,4 +203,53 @@ body.pmb section.main {
       margin-top: 25px;
     }
   }
+
+  // Petite étiquette affichée à côté de chaque établissement principal, pour voir d'un coup
+  // d'œil si sa connexion PMB est déjà renseignée ou pas.
+  .pmb-connection-badge {
+    margin-left: 15px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .pmb-connection-badge-ok {
+    background-color: $pmb-blue-light;
+    color: $pmb-blue;
+  }
+
+  .pmb-connection-badge-ko {
+    background-color: $pmb-grey-very-light;
+    color: $pmb-grey-dark;
+  }
+
+  // Formulaire de connexion PMB : chaque champ garde son explication juste dessous, en
+  // langage simple, pour qu'on sache quoi renseigner sans connaître PMB par cœur.
+  .pmb-connection-lightbox {
+    .pmb-connection-intro {
+      margin-bottom: 20px;
+      color: $pmb-grey-dark;
+    }
+
+    .pmb-connection-field {
+      margin-bottom: 15px;
+
+      label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      input {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+
+    .pmb-connection-help {
+      margin: 5px 0 0;
+      font-size: 12px;
+      color: $pmb-grey-dark;
+    }
+  }
 }

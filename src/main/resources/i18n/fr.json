@@ -13,9 +13,28 @@
   "pmb.secondary": "Établissement secondaire",
   "pmb.options.select": "-- Sélectionnez une option --",
 
+  "pmb.connection": "Connexion au serveur PMB",
+  "pmb.connection.button": "Configurer la connexion PMB",
+  "pmb.connection.button.save": "Enregistrer la connexion",
+  "pmb.connection.success": "La connexion PMB a bien été enregistrée.",
+  "pmb.connection.intro": "Ces informations permettent à l'ENT de se connecter au catalogue PMB (CDI) de cet établissement, pour aller y chercher les ressources à afficher dans le médiacentre. Elles se trouvent normalement dans l'administration de votre logiciel PMB, ou vous ont été transmises par votre prestataire PMB.",
+  "pmb.connection.host": "Adresse du serveur PMB",
+  "pmb.connection.host.help": "L'adresse internet de votre serveur PMB, par exemple https://mon-college.pmb-exemple.fr (sans rien après le nom de domaine).",
+  "pmb.connection.endpoint": "Chemin du service de connexion",
+  "pmb.connection.endpoint.help": "Un chemin technique, presque toujours le même : /pmb/ws/connector_out.php. Ne le modifiez que si votre prestataire PMB vous en a donné un autre.",
+  "pmb.connection.sourceId": "Identifiant de la source de connexion",
+  "pmb.connection.sourceId.help": "Un numéro créé côté administration de PMB, dans le menu Administration > Connecteurs > Sortants. C'est ce numéro qui autorise l'ENT à interroger votre catalogue.",
+  "pmb.connection.username": "Nom d'utilisateur",
+  "pmb.connection.password": "Mot de passe",
+  "pmb.connection.username.help": "Le nom d'utilisateur et le mot de passe d'un compte technique créé pour l'ENT, dans le menu Administration > Utilisateurs externes de PMB. Ce n'est pas votre compte administrateur personnel.",
+  "pmb.connection.password.help": "Voir l'explication du nom d'utilisateur ci-dessus.",
+  "pmb.connection.pageSize": "Nombre de fiches récupérées à chaque fois",
+  "pmb.connection.pageSize.help": "Combien de fiches sont récupérées en une fois lors de la mise à jour du catalogue. La valeur par défaut (200) convient dans la grande majorité des cas : ne la changez que si on vous l'a explicitement demandé.",
+
   "pmb.error.schools.sync": "Erreur lors de la synchronisation des écoles",
   "pmb.error.schoolService.list": "Erreur lors du listage des écoles",
   "pmb.error.schoolService.create": "Erreur lors de la création de l' / des école(s)",
+  "pmb.error.schoolService.updateConnection": "Erreur lors de l'enregistrement de la connexion PMB",
   "pmb.error.schoolService.delete": "Erreur lors de la suppression de l'école",
   "pmb.error.emailSendService.send": "Erreur lors de l'envoi de l'email à l'infra"
 }

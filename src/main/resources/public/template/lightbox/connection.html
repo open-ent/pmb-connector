@@ -1,0 +1,51 @@
+<lightbox show="vm.lightbox.connection" on-close="vm.closeConnection()" class="pmb-connection-lightbox">
+    <h2><i18n>pmb.connection</i18n> — [[vm.getSchool(vm.selectedSchoolId).uai]] [[vm.getSchool(vm.selectedSchoolId).nom]]</h2>
+
+    <div class="pmb-connection-intro">
+        <i18n>pmb.connection.intro</i18n>
+    </div>
+
+    <div class="pmb-connection-field">
+        <label for="pmb-host"><i18n>pmb.connection.host</i18n></label>
+        <input id="pmb-host" type="text" ng-model="vm.connectionForm.pmbHost" placeholder="https://mon-etablissement.pmb-exemple.fr" />
+        <p class="pmb-connection-help"><i18n>pmb.connection.host.help</i18n></p>
+    </div>
+
+    <div class="pmb-connection-field">
+        <label for="pmb-endpoint"><i18n>pmb.connection.endpoint</i18n></label>
+        <input id="pmb-endpoint" type="text" ng-model="vm.connectionForm.pmbEndpoint" placeholder="/pmb/ws/connector_out.php" />
+        <p class="pmb-connection-help"><i18n>pmb.connection.endpoint.help</i18n></p>
+    </div>
+
+    <div class="pmb-connection-field">
+        <label for="pmb-source-id"><i18n>pmb.connection.sourceId</i18n></label>
+        <input id="pmb-source-id" type="text" ng-model="vm.connectionForm.pmbSourceId" />
+        <p class="pmb-connection-help"><i18n>pmb.connection.sourceId.help</i18n></p>
+    </div>
+
+    <div class="pmb-connection-field">
+        <label for="pmb-username"><i18n>pmb.connection.username</i18n></label>
+        <input id="pmb-username" type="text" ng-model="vm.connectionForm.pmbUsername" />
+        <p class="pmb-connection-help"><i18n>pmb.connection.username.help</i18n></p>
+    </div>
+
+    <div class="pmb-connection-field">
+        <label for="pmb-password"><i18n>pmb.connection.password</i18n></label>
+        <input id="pmb-password" type="password" ng-model="vm.connectionForm.pmbPassword" />
+        <p class="pmb-connection-help"><i18n>pmb.connection.password.help</i18n></p>
+    </div>
+
+    <div class="pmb-connection-field">
+        <label for="pmb-page-size"><i18n>pmb.connection.pageSize</i18n></label>
+        <input id="pmb-page-size" type="number" min="1" ng-model="vm.connectionForm.pmbPageSize" />
+        <p class="pmb-connection-help"><i18n>pmb.connection.pageSize.help</i18n></p>
+    </div>
+
+    <section class="cell twelve">
+        <div class="main-button">
+            <button class="cell" ng-click="vm.doConnection()" ng-disabled="!vm.connectionForm.pmbHost || !vm.connectionForm.pmbEndpoint || !vm.connectionForm.pmbSourceId || !vm.connectionForm.pmbUsername || !vm.connectionForm.pmbPassword">
+                <i18n>pmb.connection.button.save</i18n>
+            </button>
+        </div>
+    </section>
+</lightbox>
