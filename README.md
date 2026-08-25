@@ -22,7 +22,7 @@ Il permet également la réservation des ressources du CDI ainsi que leur suivi.
     "PMB": {
         "host": "${pmbServer}",
         "endpoint": "${pmbEndpoint}",
-        "db_prefix": "${pmbDBPrefix}",
+        "source_id": "${pmbSourceId}",
         "page_size": ${pmbPageSize},
         "credentials": {
             "username": "${pmbUsername}",
@@ -38,8 +38,15 @@ Dans votre springboard, vous devez inclure des variables d'environnement :
 infraMailPmb = ${String}
 pmbServer = ${String}
 pmbEndpoint = Integer
-pmbDBPrefix = ${String}
+pmbSourceId = ${String}
 pmbPageSize = Integer
 pmbUsername = ${String}
 pmbPassword = ${String}
 </pre>
+
+`pmbSourceId` est l'identifiant de la source de connecteur sortant **apijsonrpc** créée côté
+admin PMB (Administration > Connecteurs > Sortants > ajouter une source), PAS un préfixe/nom de
+base de données — `endpoint` (`ws/connector_out.php`) n'accepte aucun paramètre `database`. Le
+webservice doit en outre être autorisé pour un groupe d'utilisateurs externes (Administration >
+Utilisateurs externes) auquel `pmbUsername`/`pmbPassword` doit correspondre (authentification
+Basic ou identifiants d'un utilisateur externe PMB, comparés en clair côté PMB).

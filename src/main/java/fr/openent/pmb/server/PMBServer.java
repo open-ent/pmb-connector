@@ -20,11 +20,11 @@ public class PMBServer {
     private Logger log = LoggerFactory.getLogger(PMBServer.class);
 
     private Credential credential;
-    private String dbPrefix;
     private String endpoint;
     private HttpClient httpClient;
     private String host;
     private int pageSize;
+    private String sourceId;
 
     private PMBServer() {
     }
@@ -34,13 +34,18 @@ public class PMBServer {
     }
 
     public void init(Vertx vertx, JsonObject config) {
-        if (!config.containsKey("host") || !config.containsKey("endpoint") || !config.containsKey("credentials") || config.getJsonObject("credentials", new JsonObject()).isEmpty()) {
+        if (!config.containsKey("host") || !config.containsKey("endpoint") || !config.containsKey("source_id")
+                || !config.containsKey("credentials") || config.getJsonObject("credentials", new JsonObject()).isEmpty()) {
             throw new RuntimeException("Unable to init PMB server instance. Please fill PMB configuration");
         }
 
         this.host = config.getString("host");
         this.endpoint = config.getString("endpoint");
-        this.dbPrefix = config.getString("db_prefix", "");
+        // Identifiant de la source de connecteur sortant "apijsonrpc" créée côté admin PMB
+        // (Administration > Connecteurs > Sortants) : ws/connector_out.php l'exige en paramètre
+        // ?source_id=, cf. admin/connecteurs/out/apijsonrpc/apijsonrpc.class.php côté PMB (PAS un
+        // paramètre "database", qui n'existe dans aucune version de ce dispatcher).
+        this.sourceId = config.getString("source_id");
         this.pageSize = config.getInteger("page_size", 200);
         JsonObject credentials = config.getJsonObject("credentials");
         this.credential = new Credential(credentials.getString("username"), credentials.getString("password"));
@@ -77,18 +82,14 @@ public class PMBServer {
         return this.pageSize;
     }
 
-    private String dbParam(String dbName) {
-        return String.format("%s%s", dbPrefix, dbName);
-    }
-
-    private String uri(String dbName) {
+    private String uri() {
         String h = endpoint.startsWith("/") ? host : host + "";
-        return String.format("%s%s?database=%s", h, endpoint, dbParam(dbName));
+        return String.format("%s%s?source_id=%s", h, endpoint, sourceId);
     }
 
-    public void request(String uai, JsonObject content, Handler<AsyncResult<JsonObject>> handler) {
+    public void request(JsonObject content, Handler<AsyncResult<JsonObject>> handler) {
         RequestOptions requestOptions = new RequestOptions()
-                .setAbsoluteURI(this.uri(uai))
+                .setAbsoluteURI(this.uri())
                 .setMethod(HttpMethod.POST)
                 .addHeader(HttpHeaders.CONTENT_TYPE.toString(), "application/json")
                 .addHeader(HttpHeaders.AUTHORIZATION.toString(), String.format("Basic %s", credential.basic()));

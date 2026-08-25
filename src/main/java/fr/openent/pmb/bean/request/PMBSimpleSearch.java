@@ -29,6 +29,6 @@ public class PMBSimpleSearch {
     }
 
     public void execute(Handler<AsyncResult<JsonObject>> handler) {
-        PMBServer.getInstance().request(uai, generate(), handler);
+        PMBServer.getInstance().request(generate(), handler);
     }
 }

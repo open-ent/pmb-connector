@@ -68,7 +68,7 @@ public class PMBFetchSearchRecords {
     }
 
     private void execute(Handler<AsyncResult<JsonObject>> handler) {
-        PMBServer.getInstance().request(uai, generate(), handler);
+        PMBServer.getInstance().request(generate(), handler);
     }
 
     public void next(Handler<AsyncResult<JsonObject>> handler) {
