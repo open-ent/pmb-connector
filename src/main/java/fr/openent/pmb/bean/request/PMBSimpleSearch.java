@@ -3,6 +3,7 @@ package fr.openent.pmb.bean.request;
 import fr.openent.pmb.server.PMBMethod;
 import fr.openent.pmb.server.PMBServer;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
@@ -29,6 +30,11 @@ public class PMBSimpleSearch {
     }
 
     public void execute(Handler<AsyncResult<JsonObject>> handler) {
-        PMBServer.getInstance().request(generate(), handler);
+        PMBServer server = PMBServer.get(uai);
+        if (server == null) {
+            handler.handle(Future.failedFuture("pmb.server.not.configured.for." + uai));
+            return;
+        }
+        server.request(generate(), handler);
     }
 }

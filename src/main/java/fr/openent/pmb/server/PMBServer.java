@@ -15,9 +15,18 @@ import io.vertx.core.net.ProxyType;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Un établissement = un serveur PMB (chacun son catalogue CDI). Il n'y a donc plus une
+ * seule instance globale mais un registre par UAI, alimenté à chaque amass() à partir de
+ * la configuration stockée en base (pmb.etablissement) — cf. PmbController.amass et
+ * AmassWorker.
+ */
 public class PMBServer {
-    private Logger log = LoggerFactory.getLogger(PMBServer.class);
+    private static final Logger log = LoggerFactory.getLogger(PMBServer.class);
+    private static final Map<String, PMBServer> INSTANCES = new ConcurrentHashMap<>();
 
     private Credential credential;
     private String endpoint;
@@ -29,27 +38,51 @@ public class PMBServer {
     private PMBServer() {
     }
 
-    public static PMBServer getInstance() {
-        return PMBServerHolder.instance;
+    /**
+     * @param uai UAI (déjà résolu vers son établissement principal le cas échéant)
+     * @return l'instance enregistrée pour cet établissement, ou null si aucune connexion
+     *         PMB n'a été configurée pour lui.
+     */
+    public static PMBServer get(String uai) {
+        return INSTANCES.get(uai);
     }
 
-    public void init(Vertx vertx, JsonObject config) {
-        if (!config.containsKey("host") || !config.containsKey("endpoint") || !config.containsKey("source_id")
-                || !config.containsKey("credentials") || config.getJsonObject("credentials", new JsonObject()).isEmpty()) {
-            throw new RuntimeException("Unable to init PMB server instance. Please fill PMB configuration");
+    /**
+     * Enregistre (ou remplace) l'instance PMB d'un établissement à partir de sa
+     * configuration stockée en base. Retourne null si la configuration est incomplète
+     * (établissement pas encore paramétré côté admin PMB) au lieu de lever une exception :
+     * un établissement mal configuré ne doit jamais faire échouer l'amass des autres.
+     */
+    public static PMBServer register(Vertx vertx, String uai, JsonObject config) {
+        if (config == null
+                || isBlank(config.getString("host"))
+                || isBlank(config.getString("endpoint"))
+                || isBlank(config.getString("source_id"))
+                || config.getJsonObject("credentials", new JsonObject()).isEmpty()) {
+            log.warn("[PMB@PMBServer::register] Configuration PMB incomplète pour l'établissement " + uai
+                    + ", amass ignoré pour cet établissement.");
+            return null;
         }
 
-        this.host = config.getString("host");
-        this.endpoint = config.getString("endpoint");
+        PMBServer server = new PMBServer();
+        server.host = config.getString("host");
+        server.endpoint = config.getString("endpoint");
         // Identifiant de la source de connecteur sortant "apijsonrpc" créée côté admin PMB
         // (Administration > Connecteurs > Sortants) : ws/connector_out.php l'exige en paramètre
         // ?source_id=, cf. admin/connecteurs/out/apijsonrpc/apijsonrpc.class.php côté PMB (PAS un
         // paramètre "database", qui n'existe dans aucune version de ce dispatcher).
-        this.sourceId = config.getString("source_id");
-        this.pageSize = config.getInteger("page_size", 200);
+        server.sourceId = config.getString("source_id");
+        server.pageSize = config.getInteger("page_size", 200);
         JsonObject credentials = config.getJsonObject("credentials");
-        this.credential = new Credential(credentials.getString("username"), credentials.getString("password"));
-        initHttpClient(vertx);
+        server.credential = new Credential(credentials.getString("username"), credentials.getString("password"));
+        server.initHttpClient(vertx);
+
+        INSTANCES.put(uai, server);
+        return server;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private void initHttpClient(Vertx vertx) {
@@ -117,7 +150,4 @@ public class PMBServer {
         return this.host;
     }
 
-    private static class PMBServerHolder {
-        private static final PMBServer instance = new PMBServer();
-    }
 }

@@ -22,14 +22,7 @@
         },
         "infraMail": "${infraMailPmb}",
         "PMB": {
-            "host": "${pmbServer}",
-            "endpoint": "${pmbEndpoint}",
-            "source_id": "${pmbSourceId}",
-            "page_size": ${pmbPageSize},
-            "credentials": {
-                "username": "${pmbUsername}",
-                "password": "${pmbPassword}"
-            }
+            "page_size": ${pmbPageSize}
         }
       }
     }

@@ -6,6 +6,7 @@ import fr.wseduc.rs.ApiDoc;
 import fr.wseduc.rs.Delete;
 import fr.wseduc.rs.Get;
 import fr.wseduc.rs.Post;
+import fr.wseduc.rs.Put;
 import fr.wseduc.security.ActionType;
 import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.request.RequestUtils;
@@ -48,6 +49,17 @@ public class SchoolController extends ControllerHelper {
     public void create(HttpServerRequest request) {
         RequestUtils.bodyToJsonArray(request, schools -> {
             schoolService.create(schools, arrayResponseHandler(request));
+        });
+    }
+
+    @Put("/schools/:schoolId/connection")
+    @ApiDoc("Configure or update the PMB server connection (host/endpoint/source_id/credentials) of a specific school")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(SuperAdminFilter.class)
+    public void updateConnection(HttpServerRequest request) {
+        String schoolId = request.getParam("schoolId");
+        RequestUtils.bodyToJson(request, connection -> {
+            schoolService.updateConnection(schoolId, connection, defaultResponseHandler(request));
         });
     }
 

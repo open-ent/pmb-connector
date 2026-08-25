@@ -180,6 +180,7 @@ public class PmbController extends ControllerHelper {
                 }
                 JsonArray citeStructures = event.right().getValue();
                 JsonObject map = new JsonObject();
+                JsonObject connections = new JsonObject();
                 structures.forEach(structure -> {
                     JsonObject s = (JsonObject) structure;
                     String uaiToReturn = principalOrDefaultUAI(citeStructures, s.getString("uai"));
@@ -190,10 +191,21 @@ public class PmbController extends ControllerHelper {
                                 .getString("idneo");
                     }
                     map.put(uaiToReturn, idStructure);
+                    // Connexion PMB propre à cet établissement (chaque établissement a son
+                    // propre catalogue) : portée par la ligne pmb.etablissement de l'UAI déjà
+                    // résolu ci-dessus (le "principal" d'une cité scolaire, le cas échéant).
+                    if (!connections.containsKey(uaiToReturn)) {
+                        citeStructures.stream()
+                                .filter(obj -> ((JsonObject) obj).getString("uai").equals(uaiToReturn))
+                                .findFirst()
+                                .map(JsonObject.class::cast)
+                                .ifPresent(row -> connections.put(uaiToReturn, buildConnectionConfig(row)));
+                    }
                 });
 
                 JsonObject workerConfig = new JsonObject()
-                        .put("structures", map);
+                        .put("structures", map)
+                        .put("connections", connections);
                 DeploymentOptions options = new DeploymentOptions()
                         .setConfig(workerConfig)
                         .setWorker(true);
@@ -228,6 +240,26 @@ public class PmbController extends ControllerHelper {
                 message.reply(response);
             }
         });
+    }
+
+    /**
+     * Construit la config de connexion PMB d'un établissement (host/endpoint/source_id/
+     * credentials/page_size) à partir de sa ligne pmb.etablissement. Retourne un objet
+     * incomplet (host/etc. absents) si l'établissement n'a pas encore été paramétré côté
+     * admin PMB — PMBServer.register() se charge alors de l'ignorer proprement.
+     */
+    private JsonObject buildConnectionConfig(JsonObject school) {
+        JsonObject config = new JsonObject();
+        if (school.getString("pmb_host") != null) config.put("host", school.getString("pmb_host"));
+        if (school.getString("pmb_endpoint") != null) config.put("endpoint", school.getString("pmb_endpoint"));
+        if (school.getString("pmb_source_id") != null) config.put("source_id", school.getString("pmb_source_id"));
+        config.put("page_size", school.getInteger("pmb_page_size", pmbConfig.getJsonObject("PMB", new JsonObject()).getInteger("page_size", 200)));
+        if (school.getString("pmb_username") != null && school.getString("pmb_password") != null) {
+            config.put("credentials", new JsonObject()
+                    .put("username", school.getString("pmb_username"))
+                    .put("password", school.getString("pmb_password")));
+        }
+        return config;
     }
 
     private String principalOrDefaultUAI(JsonArray deployedStructures, String UAI) {

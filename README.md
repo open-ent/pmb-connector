@@ -14,39 +14,53 @@ Il permet également la réservation des ressources du CDI ainsi que leur suivi.
 
 ## Configuration
 
+Chaque établissement a son **propre serveur PMB** (catalogue CDI propre à l'établissement,
+pas un catalogue régional partagé) : `host`/`endpoint`/`source_id`/`credentials` ne sont donc
+**plus des variables d'environnement globales**, mais des colonnes de la table
+`pmb.etablissement` (`pmb_host`, `pmb_endpoint`, `pmb_source_id`, `pmb_username`,
+`pmb_password`, `pmb_page_size`), gérées via l'API `SuperAdminFilter` ci-dessous. `PMBServer`
+n'est plus une instance globale unique mais un registre par UAI (`PMBServer.get(uai)`),
+réenregistré à chaque `amass()` à partir de ces colonnes (`PMBServer.register`, cf.
+`PmbController.amass` / `AmassWorker`). Un établissement pas encore configuré est simplement
+ignoré (log + rapport d'amass), il ne fait pas échouer les autres.
+
 <pre>
 {
   "config": {
     ...
     "infraMail": "${infraMailPmb}",
     "PMB": {
-        "host": "${pmbServer}",
-        "endpoint": "${pmbEndpoint}",
-        "source_id": "${pmbSourceId}",
-        "page_size": ${pmbPageSize},
-        "credentials": {
-            "username": "${pmbUsername}",
-            "password": "${pmbPassword}"
-        }
+        "page_size": ${pmbPageSize}
     }
   }
 }
 </pre>
 
-Dans votre springboard, vous devez inclure des variables d'environnement :
+`page_size` reste un défaut global (nombre de notices par page lors de l'amass),
+surchageable par établissement via `pmb_page_size`.
+
+### Configurer la connexion PMB d'un établissement
+
+1. Créer (ou avoir déjà) la ligne `pmb.etablissement` de l'établissement — `POST /pmb/schools`
+   (`idneo`, `uai`, `nom`, `principal`, `id_principal` pour les "cités scolaires" partageant un
+   même CDI : un UAI secondaire laisse `pmb_*` vide et hérite de la connexion de son
+   établissement `principal`).
+2. Renseigner sa connexion PMB — `PUT /pmb/schools/:schoolId/connection` :
 <pre>
-infraMailPmb = ${String}
-pmbServer = ${String}
-pmbEndpoint = Integer
-pmbSourceId = ${String}
-pmbPageSize = Integer
-pmbUsername = ${String}
-pmbPassword = ${String}
+{
+  "pmbHost": "https://pmb.etablissement.fr",
+  "pmbEndpoint": "/pmb/ws/connector_out.php",
+  "pmbSourceId": "1",
+  "pmbUsername": "entconnector",
+  "pmbPassword": "..."
+}
 </pre>
+
+Les deux routes sont protégées par `SuperAdminFilter`.
 
 `pmbSourceId` est l'identifiant de la source de connecteur sortant **apijsonrpc** créée côté
 admin PMB (Administration > Connecteurs > Sortants > ajouter une source), PAS un préfixe/nom de
-base de données — `endpoint` (`ws/connector_out.php`) n'accepte aucun paramètre `database`. Le
+base de données — `pmbEndpoint` (`ws/connector_out.php`) n'accepte aucun paramètre `database`. Le
 webservice doit en outre être autorisé pour un groupe d'utilisateurs externes (Administration >
 Utilisateurs externes) auquel `pmbUsername`/`pmbPassword` doit correspondre (authentification
 Basic ou identifiants d'un utilisateur externe PMB, comparés en clair côté PMB).

@@ -46,16 +46,18 @@ public class PMBFetchSearchRecords {
     }
 
     public int pagesCount() {
-        int pageDiff = this.recordsCount % PMBServer.getInstance().pageSize();
-        if (pageDiff == 0) return this.recordsCount / PMBServer.getInstance().pageSize();
-        else return Math.round(this.recordsCount / PMBServer.getInstance().pageSize()) + 1;
+        PMBServer server = PMBServer.get(uai);
+        if (server == null) return 0;
+        int pageDiff = this.recordsCount % server.pageSize();
+        if (pageDiff == 0) return this.recordsCount / server.pageSize();
+        else return Math.round(this.recordsCount / server.pageSize()) + 1;
     }
 
-    private JsonObject generate() {
+    private JsonObject generate(PMBServer server) {
         JsonObject params = new JsonObject()
                 .put("searchId", id)
-                .put("firstRecord", page * PMBServer.getInstance().pageSize())
-                .put("recordCount", PMBServer.getInstance().pageSize())
+                .put("firstRecord", page * server.pageSize())
+                .put("recordCount", server.pageSize())
                 .put("recordFormat", "json_unimarc")
                 .put("recordCharset", "utf-8")
                 .put("includeLinks", 1)
@@ -68,11 +70,21 @@ public class PMBFetchSearchRecords {
     }
 
     private void execute(Handler<AsyncResult<JsonObject>> handler) {
-        PMBServer.getInstance().request(generate(), handler);
+        PMBServer server = PMBServer.get(uai);
+        if (server == null) {
+            handler.handle(Future.failedFuture("pmb.server.not.configured.for." + uai));
+            return;
+        }
+        server.request(generate(server), handler);
     }
 
     public void next(Handler<AsyncResult<JsonObject>> handler) {
-        if ((this.page * PMBServer.getInstance().pageSize()) > this.recordsCount) {
+        PMBServer server = PMBServer.get(uai);
+        if (server == null) {
+            handler.handle(Future.failedFuture("pmb.server.not.configured.for." + uai));
+            return;
+        }
+        if ((this.page * server.pageSize()) > this.recordsCount) {
             handler.handle(Future.succeededFuture(emptyResponse()));
             return;
         }

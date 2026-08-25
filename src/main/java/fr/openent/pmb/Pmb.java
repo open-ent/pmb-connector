@@ -3,7 +3,6 @@ package fr.openent.pmb;
 import fr.openent.pmb.controllers.EmailSendController;
 import fr.openent.pmb.controllers.PmbController;
 import fr.openent.pmb.controllers.SchoolController;
-import fr.openent.pmb.server.PMBServer;
 import fr.wseduc.webutils.email.EmailSender;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -47,8 +46,10 @@ public class Pmb extends BaseServer {
         pmbConfig = config;
 
         JsonObject exportConfig = config.getJsonObject("export");
-        JsonObject PMBConfig = config.getJsonObject("PMB");
-        PMBServer.getInstance().init(vertx, PMBConfig);
+        // Chaque établissement a désormais son propre serveur PMB, configuré en base
+        // (pmb.etablissement) et enregistré à la volée à chaque amass() — cf.
+        // PmbController.amass / PMBServer.register. Il n'y a donc plus de PMBServer
+        // global à initialiser ici.
         EmailFactory emailFactory = EmailFactory.getInstance();
         EmailSender emailSender = emailFactory.getSender();
 

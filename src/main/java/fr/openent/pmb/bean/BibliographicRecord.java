@@ -24,10 +24,12 @@ public class BibliographicRecord {
     private String link = "";
     private List<String> metadata = new ArrayList<>();
     private String title = "";
+    private final String uai;
 
     private Logger log = LoggerFactory.getLogger(BibliographicRecord.class);
 
-    public BibliographicRecord(LinkedHashMap instruction) {
+    public BibliographicRecord(LinkedHashMap instruction, String uai) {
+        this.uai = uai;
         JsonObject content = new JsonObject((String) instruction.getOrDefault("noticeContent", "{}"));
         JsonArray f = content.getJsonArray("f", new JsonArray());
         for (int i = 0; i < f.size(); i++) {
@@ -107,6 +109,7 @@ public class BibliographicRecord {
     }
 
     private String generateLink() {
-        return String.format("%s/index.php?lvl=notice_display&id=%s", PMBServer.getInstance().host(), this.id);
+        PMBServer server = PMBServer.get(this.uai);
+        return server == null ? "" : String.format("%s/index.php?lvl=notice_display&id=%s", server.host(), this.id);
     }
 }
