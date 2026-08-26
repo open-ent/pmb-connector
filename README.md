@@ -59,7 +59,15 @@ surchageable par établissement via `pmb_page_size`.
 }
 </pre>
 
-Les deux routes sont protégées par `SuperAdminFilter`.
+L'étape 1 (`POST /pmb/schools`) est réservée au super-administrateur (`SuperAdminFilter`) —
+opération structurelle (idneo arbitraire, orchestration d'une cité scolaire). L'étape 2
+(`PUT /pmb/schools/:schoolId/connection`) accepte en plus un **administrateur local**
+(`AdminFilter`), mais uniquement pour SON PROPRE établissement : `SchoolController` vérifie que
+l'`idneo` de l'établissement visé figure dans `user.getStructures()`, sinon 403. Il existe aussi
+`GET /pmb/schools/mine` (même règle) pour lister l'établissement courant sans exposer les autres.
+
+Un écran dédié dans le dashboard (`/admin/configuration/pmb`) s'appuie sur ces routes — voir la
+documentation du connecteur PMB dans `open-ent/docs`.
 
 `pmbSourceId` est l'identifiant de la source de connecteur sortant **apijsonrpc** créée côté
 admin PMB (Administration > Connecteurs > Sortants > ajouter une source), PAS un préfixe/nom de
