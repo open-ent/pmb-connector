@@ -26,10 +26,10 @@
     <toolsVersion>2.0.0-final</toolsVersion>
     <junitVersion>5.1.0</junitVersion>
     <modPostgresVersion>2.2.1</modPostgresVersion>
-    <entCoreVersion>6.16.1</entCoreVersion>
+    <entCoreVersion>6.14.9-patched</entCoreVersion>
     <modMongoVersion>4.2.0</modMongoVersion>
     <modJsonSchemaValidatorVersion>2.2.0</modJsonSchemaValidatorVersion>
-    <entCoreLibsVersion>6.16.1</entCoreLibsVersion>
+    <entCoreLibsVersion>6.14.9-patched</entCoreLibsVersion>
   </properties>
   <dependencies>
     <dependency>
