@@ -31,6 +31,7 @@ public class PMBServer {
     private String endpoint;
     private HttpClient httpClient;
     private String host;
+    private String opacUrl;
     private int pageSize;
     private String sourceId;
 
@@ -71,17 +72,56 @@ public class PMBServer {
         // ?source_id=, cf. admin/connecteurs/out/apijsonrpc/apijsonrpc.class.php côté PMB (PAS un
         // paramètre "database", qui n'existe dans aucune version de ce dispatcher).
         server.sourceId = config.getString("source_id");
+        // URL de l'OPAC, l'interface PUBLIQUE de PMB (opac_css/) : c'est elle que voient les
+        // élèves et les enseignants, et la seule qui expose la consultation d'une notice et la
+        // réservation d'un exemplaire. `host` seul ne suffit pas à la construire : selon les
+        // installations il désigne la racine du serveur (l'OPAC est alors sous /pmb/opac_css)
+        // ou la racine de PMB (l'OPAC est sous /opac_css). Et `<host>/index.php`, sur quoi les
+        // liens de notice étaient construits, est le BACK-OFFICE de PMB — un élève qui suivait
+        // ce lien tombait sur l'authentification bibliothécaire.
+        //
+        // On la déduit donc de `endpoint`, qui porte le chemin d'installation de façon fiable :
+        // le dispatcher des connecteurs sortants est TOUJOURS `<racine PMB>/ws/connector_out.php`.
+        // `opac_url` (colonne pmb_opac_url) reste là pour les installations qui exposent leur
+        // OPAC ailleurs — autre domaine, réécriture d'URL devant PMB.
+        server.opacUrl = stripTrailingSlash(config.getString("opac_url",
+                stripTrailingSlash(server.host) + pmbRootPath(server.endpoint) + "/opac_css"));
         server.pageSize = config.getInteger("page_size", 200);
         JsonObject credentials = config.getJsonObject("credentials");
         server.credential = new Credential(credentials.getString("username"), credentials.getString("password"));
         server.initHttpClient(vertx);
 
         INSTANCES.put(uai, server);
+        // L'URL de l'OPAC est le plus souvent DÉDUITE (de l'endpoint) et non configurée : la
+        // tracer au démarrage est le seul moyen de diagnostiquer un lien de notice ou de
+        // réservation qui pointerait à côté, sans avoir à relire une notice indexée.
+        log.info("[PMB@PMBServer::register] Établissement " + uai + " : gestion=" + server.host
+                + ", OPAC=" + server.opacUrl);
         return server;
     }
 
     private static boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    /**
+     * Chemin d'installation de PMB déduit de l'endpoint du connecteur sortant, sans barre
+     * oblique finale : `/pmb/ws/connector_out.php` → `/pmb`, `/ws/connector_out.php` → `""`.
+     * Renvoie une chaîne vide si l'endpoint ne suit pas cette forme, l'OPAC étant alors
+     * supposé à la racine — cas qu'un `opac_url` explicite tranche.
+     */
+    private static String pmbRootPath(String endpoint) {
+        if (isBlank(endpoint)) return "";
+        String path = endpoint.trim();
+        if (!path.startsWith("/")) path = "/" + path;
+        int ws = path.lastIndexOf("/ws/");
+        return ws <= 0 ? "" : path.substring(0, ws);
+    }
+
+    private static String stripTrailingSlash(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
     }
 
     private void initHttpClient(Vertx vertx) {
@@ -150,6 +190,11 @@ public class PMBServer {
 
     public String host() {
         return this.host;
+    }
+
+    /** Racine de l'OPAC (interface publique), sans barre oblique finale. */
+    public String opacUrl() {
+        return this.opacUrl;
     }
 
 }

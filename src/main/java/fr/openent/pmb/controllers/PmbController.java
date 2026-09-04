@@ -252,6 +252,8 @@ public class PmbController extends ControllerHelper {
         JsonObject config = new JsonObject();
         if (school.getString("pmb_host") != null) config.put("host", school.getString("pmb_host"));
         if (school.getString("pmb_endpoint") != null) config.put("endpoint", school.getString("pmb_endpoint"));
+        // Facultative : PMBServer retombe sur `<host>/opac_css`, la convention d'installation.
+        if (school.getString("pmb_opac_url") != null) config.put("opac_url", school.getString("pmb_opac_url"));
         if (school.getString("pmb_source_id") != null) config.put("source_id", school.getString("pmb_source_id"));
         config.put("page_size", school.getInteger("pmb_page_size", pmbConfig.getJsonObject("PMB", new JsonObject()).getInteger("page_size", 200)));
         if (school.getString("pmb_username") != null && school.getString("pmb_password") != null) {

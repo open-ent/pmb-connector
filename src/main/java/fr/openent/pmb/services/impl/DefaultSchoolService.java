@@ -28,11 +28,12 @@ public class DefaultSchoolService implements SchoolService {
     @Override
     public void create(JsonArray schools, Handler<Either<String, JsonArray>> handler) {
         String query = "INSERT INTO " + Pmb.SCHOOL_TABLE +
-                " (idneo, uai, nom, principal, id_principal, pmb_host, pmb_endpoint, pmb_source_id, pmb_username, pmb_password, pmb_page_size) VALUES ";
+                " (idneo, uai, nom, principal, id_principal, pmb_host, pmb_endpoint, pmb_opac_url," +
+                " pmb_source_id, pmb_username, pmb_password, pmb_page_size) VALUES ";
         JsonArray params = new JsonArray();
 
         for (int i = 0; i < schools.size(); i++) {
-            query += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ";
+            query += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ";
             JsonObject school = schools.getJsonObject(i);
             params.add(school.getString("idneo", ""))
                 .add(school.getString("uai", ""))
@@ -41,6 +42,7 @@ public class DefaultSchoolService implements SchoolService {
                 .add(school.getInteger("id_principal", null))
                 .add(school.getString("pmbHost", null))
                 .add(school.getString("pmbEndpoint", null))
+                .add(school.getString("pmbOpacUrl", null))
                 .add(school.getString("pmbSourceId", null))
                 .add(school.getString("pmbUsername", null))
                 .add(school.getString("pmbPassword", null))
@@ -54,11 +56,13 @@ public class DefaultSchoolService implements SchoolService {
     @Override
     public void updateConnection(String schoolId, JsonObject connection, Handler<Either<String, JsonObject>> handler) {
         String query = "UPDATE " + Pmb.SCHOOL_TABLE +
-                " SET pmb_host = ?, pmb_endpoint = ?, pmb_source_id = ?, pmb_username = ?, pmb_password = ?, pmb_page_size = ?" +
+                " SET pmb_host = ?, pmb_endpoint = ?, pmb_opac_url = ?, pmb_source_id = ?," +
+                " pmb_username = ?, pmb_password = ?, pmb_page_size = ?" +
                 " WHERE id = ?;";
         JsonArray params = new JsonArray()
                 .add(connection.getString("pmbHost", null))
                 .add(connection.getString("pmbEndpoint", null))
+                .add(connection.getString("pmbOpacUrl", null))
                 .add(connection.getString("pmbSourceId", null))
                 .add(connection.getString("pmbUsername", null))
                 .add(connection.getString("pmbPassword", null))

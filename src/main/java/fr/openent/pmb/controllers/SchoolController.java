@@ -99,7 +99,7 @@ public class SchoolController extends ControllerHelper {
      * est ouvert à l'administrateur local — cf. updateConnection ci-dessous.
      */
     @Put("/schools/:schoolId/connection")
-    @ApiDoc("Configure or update the PMB server connection (host/endpoint/source_id/credentials) of a specific school")
+    @ApiDoc("Configure or update the PMB server connection (host/endpoint/opac_url/source_id/credentials) of a specific school")
     @SecuredAction(value = "", type = ActionType.RESOURCE)
     @ResourceFilter(AdminFilter.class)
     public void updateConnection(HttpServerRequest request) {

@@ -105,11 +105,39 @@ public class BibliographicRecord {
                 .put("isbn", this.isbn)
                 .put("link", !this.link.trim().isEmpty() ? this.link : this.generateLink())
                 .put("metadata", new JsonArray(this.metadata))
+                .put("reservation_link", this.generateReservationLink())
                 .put("title", this.title);
     }
 
+    /**
+     * Consultation de la notice dans l'OPAC. Construit sur l'URL de l'OPAC et non sur `host` :
+     * `<host>/index.php` est le back-office de PMB, réservé aux gestionnaires du CDI — un élève
+     * qui suivait ce lien tombait sur l'authentification bibliothécaire.
+     */
     private String generateLink() {
         PMBServer server = PMBServer.get(this.uai);
-        return server == null ? "" : String.format("%s/index.php?lvl=notice_display&id=%s", server.host(), this.id);
+        return server == null ? "" : String.format("%s/index.php?lvl=notice_display&id=%s", server.opacUrl(), this.id);
+    }
+
+    /**
+     * Réservation d'un exemplaire de la notice, dans l'OPAC.
+     *
+     * PMB gère lui-même les exemplaires, les prêts et la file d'attente : l'ENT n'a pas à
+     * dupliquer cet état, il amène l'utilisateur au bon endroit. `do_resa.php?lvl=resa` est
+     * exactement le lien que l'OPAC pose lui-même sur ses écrans de notice (cf.
+     * `opac_css/classes/record_datas.class.php`, get_resas_datas), y compris pour un visiteur
+     * non authentifié : PMB demande alors ses identifiants d'emprunteur, que le SSO CAS
+     * (`PmbRegisteredService`) fournit déjà.
+     *
+     * Le lien est renvoyé sans condition : la disponibilité d'un exemplaire, le plafond de
+     * réservations et le paramètre `opac_resa` de l'établissement sont des états que seul PMB
+     * connaît, et qui changent entre deux moissonnages. C'est donc PMB qui refuse, avec son
+     * propre message, plutôt que l'ENT qui devine sur une donnée périmée.
+     */
+    private String generateReservationLink() {
+        PMBServer server = PMBServer.get(this.uai);
+        return server == null
+                ? ""
+                : String.format("%s/do_resa.php?lvl=resa&id_notice=%s", server.opacUrl(), this.id);
     }
 }
