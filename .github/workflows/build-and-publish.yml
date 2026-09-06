@@ -25,6 +25,14 @@ permissions:
   contents: write
   packages: write
 
+# Un tag poussé alors qu'un workflow_dispatch est lancé sur la même référence produit deux
+# runs simultanés qui font tous deux delete-then-deploy sur nexus (l'un peut supprimer le
+# composant pendant que l'autre le téléverse). On sérialise par référence, sans annuler :
+# une publication en cours doit aller au bout.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-publish:
     name: Build & Publish Fat Mod
@@ -138,8 +146,13 @@ jobs:
               -Dclassifier=fat -Dpackaging=jar -DrepositoryId=pt-releases \
               -Durl="${NEXUS_BASE}/repository/maven-releases/" -B )
 
+      # Miroir de commodité : la source de vérité du fat-mod reste rct-nexus (publié
+      # ci-dessus). Sur un tag rejoué, l'action doit METTRE À JOUR la release existante
+      # (PATCH /releases/{id}) et GitHub refuse cet appel au GITHUB_TOKEN
+      # (cf. softprops/action-gh-release#836) : on ne rougit pas le CI pour autant.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           files: target/*-fat.jar
