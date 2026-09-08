@@ -153,7 +153,7 @@ jobs:
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         continue-on-error: true
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: target/*-fat.jar
           generate_release_notes: true
