@@ -107,7 +107,11 @@ public class HttpClientHelper extends ControllerHelper {
                         try {
                             handler.handle(new Either.Right<>(new JsonArray(decompress(buff))));
                         } catch (IOException e) {
-                            throw new RuntimeException(e);
+                            // Sans ce handle, une erreur de décompression gzip devenait une
+                            // RuntimeException non catchée dans l'endHandler : le handler
+                            // n'était jamais appelé, l'appelant restait bloqué indéfiniment.
+                            log.error("[PMB@HttpClientHelper::webServicePmbGet] Fail to decompress gzip response", e);
+                            handler.handle(new Either.Left<>("Fail to decompress gzip response: " + e.getMessage()));
                         }
                     } else {
                         handler.handle(new Either.Right<>(new JsonArray(buff.toString())));
@@ -119,6 +123,9 @@ public class HttpClientHelper extends ControllerHelper {
             })
             .onFailure(throwable -> {
                 log.error("[PMB@HttpClientHelper::webServicePmbGet] " + throwable.getMessage(), throwable);
+                // Sans ce handle, l'appelant restait bloqué indéfiniment sur tout échec de la
+                // requête HTTP vers le webservice PMB (timeout, connexion refusée, etc.).
+                handler.handle(new Either.Left<>("Fail to call PMB webservice: " + throwable.getMessage()));
                 if (!responseIsSent.getAndSet(true)) {
                     httpClient.close();
                 }
