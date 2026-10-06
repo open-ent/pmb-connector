@@ -21,15 +21,20 @@
       <name>ODE Repository</name>
       <url>https://maven.opendigitaleducation.com/nexus/content/groups/public</url>
     </repository>
+    <repository>
+      <id>pt-releases</id>
+      <name>rct-nexus maven-releases (entcore-libs patchées)</name>
+      <url>https://rct-nexus.tech.fr/repository/maven-releases/</url>
+    </repository>
   </repositories>
   <properties>
     <toolsVersion>2.0.0-final</toolsVersion>
     <junitVersion>5.1.0</junitVersion>
     <modPostgresVersion>2.2.1</modPostgresVersion>
-    <entCoreVersion>6.14.9-patched</entCoreVersion>
+    <entCoreVersion>6.16.14-patched</entCoreVersion>
     <modMongoVersion>4.2.0</modMongoVersion>
     <modJsonSchemaValidatorVersion>2.2.0</modJsonSchemaValidatorVersion>
-    <entCoreLibsVersion>6.14.9-patched</entCoreLibsVersion>
+    <entCoreLibsVersion>6.16.7-patched</entCoreLibsVersion>
   </properties>
   <dependencies>
     <dependency>
