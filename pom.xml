@@ -50,12 +50,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.entcore</groupId>
-      <artifactId>common</artifactId>
-      <version>${entCoreLibsVersion}</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>mod-mongo-persistor</artifactId>
       <version>${modMongoVersion}</version>
