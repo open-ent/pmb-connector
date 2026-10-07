@@ -13,6 +13,15 @@ export class School implements Selectable {
     id_principal: number;
     selected: boolean;
 
+    // Connexion au serveur PMB de cet établissement (vide si pas encore configurée, ou si
+    // l'établissement est secondaire et hérite de la connexion de son établissement principal).
+    pmb_host: string;
+    pmb_endpoint: string;
+    pmb_source_id: string;
+    pmb_username: string;
+    pmb_password: string;
+    pmb_page_size: number;
+
     constructor() {
         this.id = null;
         this.idneo = null;
@@ -21,6 +30,17 @@ export class School implements Selectable {
         this.principal = null;
         this.id_principal = null;
         this.selected = false;
+        this.pmb_host = null;
+        this.pmb_endpoint = null;
+        this.pmb_source_id = null;
+        this.pmb_username = null;
+        this.pmb_password = null;
+        this.pmb_page_size = null;
+    }
+
+    // La connexion est considérée configurée dès que l'adresse du serveur est renseignée.
+    isConnectionConfigured() : boolean {
+        return !!this.pmb_host;
     }
 
     toJson() : Object {

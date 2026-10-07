@@ -1,6 +1,6 @@
-import {ng, template} from 'entcore';
+import {idiom, ng, notify, template} from 'entcore';
 import {School, Schools} from "../models";
-import {emailSendService, schoolService} from "../services";
+import {emailSendService, schoolService, SchoolConnection} from "../services";
 
 interface ViewModel {
     schools: Schools;
@@ -8,10 +8,12 @@ interface ViewModel {
     mainSchools: School[];
     secondarySchools: School[];
     selectedSchoolId : number;
+    connectionForm: SchoolConnection;
     lightbox: {
         create: boolean,
         attach: boolean,
-        delete: boolean
+        delete: boolean,
+        connection: boolean
     };
 
     openCreate() : void;
@@ -23,6 +25,9 @@ interface ViewModel {
     openDelete(selectedSchoolId: number) : void;
     doDelete() : Promise<void>;
     closeDelete() : void;
+    openConnection(selectedSchoolId: number) : void;
+    doConnection() : Promise<void>;
+    closeConnection() : void;
     getSchool(schoolId: number) : School;
     getSecondarySchools(mSchool: School) : School[];
 }
@@ -37,7 +42,8 @@ export const pmbController = ng.controller('PmbController', ['$scope',
         vm.lightbox = {
             create: false,
             attach: false,
-            delete: false
+            delete: false,
+            connection: false
         };
         vm.schools = new Schools();
         vm.neoSchools = new Schools();
@@ -124,6 +130,38 @@ export const pmbController = ng.controller('PmbController', ['$scope',
     }
 
     vm.closeDelete = () : void => {
+        template.close('lightbox');
+        init();
+    }
+
+    vm.openConnection = (selectedSchoolId: number) : void => {
+        vm.selectedSchoolId = selectedSchoolId;
+        const school = vm.getSchool(selectedSchoolId);
+        // Pré-remplit le formulaire avec la connexion déjà enregistrée (vide si jamais
+        // configurée) : on ne repart jamais d'un formulaire vierge pour une modification.
+        vm.connectionForm = {
+            pmbHost: school.pmb_host,
+            pmbEndpoint: school.pmb_endpoint,
+            pmbSourceId: school.pmb_source_id,
+            pmbUsername: school.pmb_username,
+            pmbPassword: school.pmb_password,
+            pmbPageSize: school.pmb_page_size || 200
+        };
+        template.open('lightbox', 'lightbox/connection');
+        vm.lightbox.connection = true;
+    }
+
+    vm.doConnection = async () : Promise<void> => {
+        try {
+            await schoolService.updateConnection(vm.selectedSchoolId, vm.connectionForm);
+            notify.success(idiom.translate('pmb.connection.success'));
+            vm.closeConnection();
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    vm.closeConnection = () : void => {
         template.close('lightbox');
         init();
     }

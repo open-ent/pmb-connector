@@ -2,10 +2,20 @@ import {idiom, ng, notify} from 'entcore';
 import http, {AxiosResponse} from 'axios';
 import {School} from '../models';
 
+export interface SchoolConnection {
+    pmbHost: string;
+    pmbEndpoint: string;
+    pmbSourceId: string;
+    pmbUsername: string;
+    pmbPassword: string;
+    pmbPageSize: number;
+}
+
 export interface SchoolService {
     list() : Promise<AxiosResponse>;
     listNeo() : Promise<AxiosResponse>;
     create(schools: School[]) : Promise<AxiosResponse>;
+    updateConnection(schoolId: number, connection: SchoolConnection) : Promise<AxiosResponse>;
     delete(schoolId: number) : Promise<AxiosResponse>;
 }
 
@@ -34,6 +44,15 @@ export const schoolService: SchoolService = {
             return http.post('/pmb/schools', schools);
         } catch (err) {
             notify.error(idiom.translate('pmb.error.schoolService.create'));
+            throw err;
+        }
+    },
+
+    async updateConnection(schoolId: number, connection: SchoolConnection) : Promise<AxiosResponse> {
+        try {
+            return await http.put(`/pmb/schools/${schoolId}/connection`, connection);
+        } catch (err) {
+            notify.error(idiom.translate('pmb.error.schoolService.updateConnection'));
             throw err;
         }
     },

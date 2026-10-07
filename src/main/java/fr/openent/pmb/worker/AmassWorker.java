@@ -4,6 +4,7 @@ import fr.openent.pmb.bean.BibliographicRecord;
 import fr.openent.pmb.bean.Report;
 import fr.openent.pmb.bean.request.PMBFetchSearchRecords;
 import fr.openent.pmb.bean.request.PMBSimpleSearch;
+import fr.openent.pmb.server.PMBServer;
 import io.vertx.core.*;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -25,6 +26,7 @@ public class AmassWorker extends AbstractVerticle {
         report.start();
 
         JsonObject structures = config().getJsonObject("structures");
+        JsonObject connections = config().getJsonObject("connections", new JsonObject());
         if (structures.isEmpty()) {
             log.info(String.format("[Worker@%s] Stopping PMB amass worker: empty structures", vertx.getOrCreateContext().deploymentID()));
             log.info(report.end().generate());
@@ -34,10 +36,25 @@ public class AmassWorker extends AbstractVerticle {
 
         List<Future<Void>> futures = new ArrayList<>();
         for (String uai : structures.fieldNames()) {
+            // Chaque établissement a son propre serveur PMB : on (ré)enregistre son instance
+            // à partir de la configuration stockée en base avant de l'interroger. Un
+            // établissement pas encore paramétré côté admin PMB est simplement ignoré, il
+            // ne doit pas faire échouer l'amass des autres établissements.
+            if (PMBServer.register(vertx, uai, connections.getJsonObject(uai)) == null) {
+                log.info(String.format("Skipping %s: no PMB connection configured", uai));
+                continue;
+            }
             Promise<Void> promise = Promise.promise();
             log.info(String.format("Amassing %s bibliographic record", uai));
             amass(uai, structures.getString(uai), promise);
             futures.add(promise.future());
+        }
+        if (futures.isEmpty()) {
+            report.end();
+            log.info(report.generate().encodePrettily());
+            log.info(String.format("[Worker@%s] Stopping PMB amass worker: no configured structure", vertx.getOrCreateContext().deploymentID()));
+            vertx.undeploy(vertx.getOrCreateContext().deploymentID());
+            return;
         }
 
         Future.any(futures).onComplete(ar -> {
@@ -63,8 +80,19 @@ public class AmassWorker extends AbstractVerticle {
                 return;
             }
 
-            String searchId = ar.result().getJsonObject("result", new JsonObject()).getString("searchId");
-            int recordsCount = Integer.parseInt(ar.result().getJsonObject("result", new JsonObject()).getString("nbResults"));
+            // PMB renvoie "result": null (pas un objet vide) quand la recherche ne trouve
+            // rien — ex. catalogue vide/non encore alimenté. getJsonObject(key, default) de
+            // Vert.x ne retombe sur le défaut QUE si la clé est absente, pas si elle vaut
+            // explicitement null : sans ce garde, un catalogue vide faisait planter tout
+            // l'amass (NullPointerException) au lieu de simplement remonter 0 notice.
+            JsonObject result = ar.result().getJsonObject("result");
+            if (result == null) {
+                log.info(String.format("No result for structure %s (empty PMB catalog?)", uai));
+                handler.handle(Future.succeededFuture());
+                return;
+            }
+            String searchId = result.getString("searchId");
+            int recordsCount = Integer.parseInt(result.getString("nbResults"));
             PMBFetchSearchRecords fetch = new PMBFetchSearchRecords()
                     .setUAI(uai)
                     .setSearchId(searchId)
@@ -83,7 +111,7 @@ public class AmassWorker extends AbstractVerticle {
                 // If result is not empty, map result and send it to mediacentre then process next page
                 if (!result.isEmpty()) {
                     List<JsonObject> records = result.stream()
-                            .map(BibliographicRecord::new)
+                            .map(instruction -> new BibliographicRecord(instruction, fetch.uai()))
                             .map(BibliographicRecord::toJSON)
                             .collect(Collectors.toList());
                     records.forEach(record -> record.put("structure", structureId));

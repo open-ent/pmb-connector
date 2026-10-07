@@ -32,7 +32,11 @@
             <div class="main-school">
                 <span class="uainame">
                     <i class="trash" ng-click="vm.openDelete(mSchool.id)"></i>
-                    [[mSchool.uai]] [[mSchool.nom]]</span>
+                    [[mSchool.uai]] [[mSchool.nom]]
+                    <span ng-if="mSchool.isConnectionConfigured()" class="pmb-connection-badge pmb-connection-badge-ok" title="Connexion PMB configurée">✓ PMB connecté</span>
+                    <span ng-if="!mSchool.isConnectionConfigured()" class="pmb-connection-badge pmb-connection-badge-ko" title="Connexion PMB non configurée">✗ PMB non connecté</span>
+                </span>
+                <button class="cell" ng-click="vm.openConnection(mSchool.id)"><i18n>pmb.connection.button</i18n></button>
                 <button class="cell" ng-click="vm.openAttach(mSchool.id)"><i18n>pmb.attach.button</i18n></button>
             </div>
 

@@ -29,6 +29,15 @@ public interface SchoolService {
     void create(JsonArray schools, Handler<Either<String, JsonArray>> handler);
 
     /**
+     * Update the PMB connection of a specific school (host/endpoint/source_id/credentials/
+     * page_size) without touching its idneo/uai/nom/principal fields.
+     * @param schoolId school identifier
+     * @param connection JsonObject data (pmbHost, pmbEndpoint, pmbSourceId, pmbUsername, pmbPassword, pmbPageSize)
+     * @param handler function handler returning JsonObject data
+     */
+    void updateConnection(String schoolId, JsonObject connection, Handler<Either<String, JsonObject>> handler);
+
+    /**
      * Delete a scpecific school
      * @param schoolId school identifier
      * @param handler function handler returning JsonObject data
