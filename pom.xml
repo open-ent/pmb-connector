@@ -34,7 +34,7 @@
     <entCoreVersion>6.16.14-patched</entCoreVersion>
     <modMongoVersion>4.2.0</modMongoVersion>
     <modJsonSchemaValidatorVersion>2.2.0</modJsonSchemaValidatorVersion>
-    <entCoreLibsVersion>6.16.7-patched</entCoreLibsVersion>
+    <entCoreLibsVersion>6.16.8-patched</entCoreLibsVersion>
   </properties>
   <dependencies>
     <dependency>
