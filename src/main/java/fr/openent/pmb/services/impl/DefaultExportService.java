@@ -27,8 +27,8 @@ public class DefaultExportService implements ExportService {
 
     @Override
     public void getUser(JsonArray UAIs, String type, Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH (s:Structure)<-[:DEPENDS]-(g:ManualGroup {name:{group_name}})<-[:IN]-(u:User) " +
-                "WHERE s.UAI IN {uais} " +
+        String query = "MATCH (s:Structure)<-[:DEPENDS]-(g:ManualGroup {name:$group_name})<-[:IN]-(u:User) " +
+                "WHERE s.UAI IN $uais " +
                 "RETURN DISTINCT u.externalId as externalId, u.firstName as firstName, u.lastName as lastName, u.login as login, u.id as id, " +
                 "CASE WHEN u.emailInternal IS NULL THEN u.email ELSE u.emailInternal END as emailInterne;";
 
@@ -67,8 +67,8 @@ public class DefaultExportService implements ExportService {
     public Future<JsonArray> getUserLendGroupUAIs(List<String> userIds) {
         Promise<JsonArray> promise = Promise.promise();
 
-        String query = "MATCH (s:Structure)<-[:DEPENDS]-(g:ManualGroup {name:{group_name}})<-[:IN]-(u:User) " +
-                "WHERE u.id IN {user_ids} " +
+        String query = "MATCH (s:Structure)<-[:DEPENDS]-(g:ManualGroup {name:$group_name})<-[:IN]-(u:User) " +
+                "WHERE u.id IN $user_ids " +
                 "RETURN u.id as id, collect(s.UAI) as uais;";
 
 
@@ -90,7 +90,7 @@ public class DefaultExportService implements ExportService {
         // établissement n'était jamais "trouvé déployé", l'amass PMB tournait toujours à
         // vide silencieusement (masqué en plus par le root WARN du logger, cf. commit du
         // fix logback-ent.xml).
-        String query = "MATCH(s:Structure) WHERE HAS(s.exports) AND 'PMB' IN s.exports RETURN DISTINCT s.UAI as uai, s.id as id";
+        String query = "MATCH(s:Structure) WHERE s.exports IS NOT NULL AND 'PMB' IN s.exports RETURN DISTINCT s.UAI as uai, s.id as id";
         Neo4j.getInstance().execute(query, new JsonObject(), Neo4jResult.validResultHandler(handler));
     }
 }

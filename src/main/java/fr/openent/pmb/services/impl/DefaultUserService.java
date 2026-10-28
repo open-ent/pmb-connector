@@ -21,8 +21,8 @@ public class DefaultUserService implements UserService {
         String query = "MATCH (s:Structure)<-[:DEPENDS]-(cpg:ProfileGroup)"+
                 "OPTIONAL MATCH (cpg)-[:HAS_PROFILE]->(p:Profile)\n" +
                 "OPTIONAL MATCH (cpg)<-[:IN]-(u:User)\n" +
-                "WHERE s.UAI IN {uais}\n" +
-                "AND (p.name IN {type})\n" +
+                "WHERE s.UAI IN $uais\n" +
+                "AND (p.name IN $type)\n" +
                 "RETURN DISTINCT\n" +
                 "u.externalId as externalId,\n" +
                 "u.email as email,\n" +
