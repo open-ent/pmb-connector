@@ -2,11 +2,10 @@ name: Build & Publish Fat Mod
 
 # Module GULP legacy à structure PLATE (pom.xml + gulpfile.js + webpack.config.js à la
 # racine, pas de découpage backend/frontend). Un seul job : build du front AngularJS/TS via
-# l'image node figée opendigitaleducation/node:10-alpine (gulp 3.9.1 / webpack 3.1.0 / TS
-# ancien - une image Node moderne casse ces vieux outils), puis build + publication du fat
-# jar Maven. Calqué sur le workflow build-and-publish.yml de connectors/nextcloud, adapté à
-# la structure plate (cf. gar-connector/moodle-connector, même forme, pas de front à builder
-# en CI côté eux).
+# l'image node:26-alpine (gulp 5, webpack 1 de webpack-stream appelé directement), puis
+# build + publication du fat jar Maven sous JDK 25. Calqué sur le workflow build-and-publish.yml
+# de connectors/nextcloud, adapté à la structure plate (cf. gar-connector/moodle-connector,
+# même forme).
 
 on:
   push:
@@ -43,7 +42,7 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: temurin
           cache: maven
 
@@ -52,7 +51,7 @@ jobs:
         run: |
           docker run --rm --user root \
             -v "$PWD:/home/node/app" -w /home/node/app \
-            opendigitaleducation/node:10-alpine \
+            node:26-alpine \
             sh -c "npm install && node_modules/gulp/bin/gulp.js build"
 
       # --- Maven : accès GitHub Packages (dépendance fr.openent:app-parent) ---
@@ -110,6 +109,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: mvn clean package -Dmaven.test.skip=true -B -DbuildNumber=${GITHUB_SHA::8} -DscmBranch=${GITHUB_REF_NAME}
+
+      # Depuis le JDK 23, javac n'exécute plus les processeurs d'annotations trouvés sur le
+      # classpath : sans `-proc:full` (pom), le jar part sans securedaction/ ni routes/, et
+      # chaque route sécurisée répond 404 — sans aucune erreur de build.
+      - name: Verify annotation metadata
+        run: |
+          FAT_JAR=$(ls target/*-fat.jar | head -1)
+          for d in securedaction routes; do
+            unzip -Z1 "$FAT_JAR" | grep -q "^$d/" || { echo "::error::$d/ absent de $FAT_JAR"; exit 1; }
+          done
 
       # --- Publication du fat-mod (au tag uniquement) ---
       - name: Publish fat JAR to GitHub Packages
